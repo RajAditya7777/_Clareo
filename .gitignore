@@ -34,6 +34,10 @@ yarn-debug.log*
 yarn-error.log*
 bun-debug.log*
 
-# Database
+# Database & Storage
 *.db
 *.sqlite
+backend/uploads/
+backend/backend/
+backend/nos_job_def/
+frontend/prisma/dev.db

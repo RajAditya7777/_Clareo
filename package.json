@@ -1,0 +1,16 @@
+{
+  "name": "clariyo-monorepo",
+  "version": "1.0.0",
+  "description": "Clariyo AI-powered job application intelligence platform.",
+  "scripts": {
+    "dev": "npx concurrently --kill-others \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "uvicorn python.main:app --reload --port 8000 --app-dir backend",
+    "dev:eliza": "npm run start:all --prefix backend",
+    "start": "npm run dev",
+    "setup": "npm install --prefix frontend && npm install --prefix backend && pip install -r backend/requirements.txt"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

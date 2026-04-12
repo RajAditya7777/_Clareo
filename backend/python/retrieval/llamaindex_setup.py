@@ -29,10 +29,11 @@ except ImportError:
 
 
 # ── Configuration ──────────────────────────────────────────────────────────
-NOSANA_LLM_URL = os.getenv("NOSANA_LLM_URL", "https://node.nosana.io")
-NOSANA_MODEL = os.getenv("NOSANA_MODEL_NAME", "nosana-job-llm")
+NOSANA_LLM_URL = os.getenv("NOSANA_LLM_URL", "https://2SQV8NsPUFhqba8DEKWqCYpEjgpe434UAZYGbNbtUfHd.node.k8s.prd.nos.ci")
+NOSANA_MODEL = os.getenv("NOSANA_MODEL_NAME", "DeepSeek-R1-Distill-Qwen-7B")
 RESUMES_DIR = Path(os.getenv("RESUMES_DIR", "./resumes"))
 PERSIST_DIR = Path(os.getenv("VECTOR_STORE_DIR", "./storage"))
+CHAT_PERSIST_DIR = Path(os.getenv("CHAT_STORE_DIR", "./storage_chat"))
 MAX_RETRIES = 3
 RETRY_DELAY_SECONDS = 2
 
@@ -95,6 +96,40 @@ def get_resume_index() -> Optional[object]:
     except Exception as e:
         print(f"[LlamaIndex] Warning: Failed to build index: {e}")
         return None
+
+
+def get_chat_index() -> Optional[object]:
+    """Build or load the chat history vector index."""
+    if not LLAMA_INDEX_AVAILABLE:
+        return None
+
+    try:
+        if CHAT_PERSIST_DIR.exists() and any(CHAT_PERSIST_DIR.iterdir()):
+            storage_context = StorageContext.from_defaults(persist_dir=str(CHAT_PERSIST_DIR))
+            return load_index_from_storage(storage_context)
+        
+        # Create empty index if none exists
+        from llama_index.core import Document
+        index = VectorStoreIndex.from_documents([])
+        CHAT_PERSIST_DIR.mkdir(parents=True, exist_ok=True)
+        index.storage_context.persist(str(CHAT_PERSIST_DIR))
+        return index
+    except Exception as e:
+        print(f"[LlamaIndex] Warning: Failed to load chat index: {e}")
+        return None
+
+
+def index_chat_message(role: str, content: str, message_id: str):
+    """Adds a new chat message to the semantic memory index."""
+    index = get_chat_index()
+    if not index:
+        return
+
+    from llama_index.core import Document
+    text = f"Role: {role}\nContent: {content}"
+    doc = Document(text=text, doc_id=message_id)
+    index.insert(doc)
+    index.storage_context.persist(str(CHAT_PERSIST_DIR))
 
 
 def _extract_score(text: str) -> int:

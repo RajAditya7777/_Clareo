@@ -1,0 +1,13 @@
+import enum
+
+class ApplicationStatus(enum.Enum):
+    SCRAPED = "SCRAPED"
+    MATCHED = "MATCHED"
+    DRAFTED = "DRAFTED"
+    AWAITING_APPROVAL = "AWAITING_APPROVAL"
+    APPLIED = "APPLIED"
+    REPLIED = "REPLIED"
+    INTERVIEW = "INTERVIEW"
+    OFFER = "OFFER"
+    REJECTED = "REJECTED"
+    DISCARDED = "DISCARDED"

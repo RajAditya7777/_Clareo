@@ -40,7 +40,7 @@ async function callLLM(system: string, user: string): Promise<string> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "nosana-job-llm",
+      model: process.env.NOSANA_MODEL_NAME || "DeepSeek-R1-Distill-Qwen-7B",
       messages: [
         { role: "system", content: system },
         { role: "user",   content: user   }
@@ -121,7 +121,7 @@ async function main() {
     }));
   });
   if (!step1.ok) { emit({ status: "error", step: "SCRAPE_JOBS", message: step1.error }); process.exit(1); }
-  const jobs = step1.data as { id: string; company: string; title: string; location: string; url: string; description: string }[];
+  const jobs = step1.data as { id: string; company: string; title: string; location: string; url: string; description: string; platform: string; company_logo: string }[];
   pipelineResults.jobs_found = jobs.length;
 
   // ── Step 3: PARSE_RESUME (Cache-aware) ──────────────────────────────────

@@ -1,7 +1,26 @@
 import type { Metadata } from "next";
+import { Inter, Lora, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import LenisWrapper from "@/components/LenisWrapper";
 import { AuthProvider } from "@/components/AuthProvider";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const lora = Lora({
+  subsets: ["latin"],
+  variable: "--font-lora",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Claero — AI Talent Intelligence",
@@ -20,8 +39,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body style={{ margin: 0, padding: 0, background: "#000" }}>
+    <html lang="en" className={`${inter.variable} ${lora.variable} ${jetbrainsMono.variable}`}>
+      <body style={{ margin: 0, padding: 0, background: "#000", fontFamily: "var(--font-inter, system-ui, sans-serif)" }}>
         <AuthProvider>
           <LenisWrapper>
             {children}
@@ -31,3 +50,4 @@ export default function RootLayout({
     </html>
   );
 }
+

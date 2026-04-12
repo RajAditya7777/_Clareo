@@ -65,7 +65,7 @@ Why they're a match: ${JSON.stringify(matchResult, null, 2)}`;
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "nosana-job-llm",
+      model: process.env.NOSANA_MODEL_NAME || "DeepSeek-R1-Distill-Qwen-7B",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }

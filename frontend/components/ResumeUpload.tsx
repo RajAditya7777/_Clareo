@@ -48,7 +48,7 @@ export function ResumeUpload({ onSuccess }: ResumeUploadProps) {
   return (
     <div className="w-full max-w-md mx-auto">
       <motion.div
-        {...getRootProps()}
+        {...(getRootProps() as any)}
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
         className={`relative group cursor-pointer rounded-2xl border-2 border-dashed transition-all duration-300 p-8 flex flex-col items-center justify-center gap-4 ${
