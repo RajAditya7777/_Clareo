@@ -1,5 +1,7 @@
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Copy, ThumbsUp, ThumbsDown, RotateCcw, FileText } from "lucide-react";
 import { Message } from "./types";
-import { FileText } from "lucide-react";
 
 // ─── Claude-style 8-spoke Asterisk Typing Indicator ────────────────────────────
 export function ClaudeTypingIndicator() {

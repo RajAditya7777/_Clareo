@@ -1,3 +1,4 @@
+import React, { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, FileText, X } from "lucide-react";
 

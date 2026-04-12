@@ -22,7 +22,7 @@ export function ActiveChatView({
   isTyping: boolean;
   value: string;
   onChange: (v: string) => void;
-  onSend: (file?: File) => void;
+  onSend: (file?: File, text?: string) => void;
   intakeState: IntakeState;
   onIntakeAnswer: (answer: string) => void;
   onIntakeSkip: () => void;
