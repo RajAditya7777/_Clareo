@@ -39,11 +39,14 @@ class JobApplication(Base):
     matched_skills = Column(JSON, default=list)
     missing_skills = Column(JSON, default=list)
     recommendation = Column(String, default="")   # APPLY / BORDERLINE / SKIP
+    platform = Column(String, default="")
+    company_logo = Column(String, default="")
 
     # ── Application artifacts ──────────────────────────────────────────────
     cover_letter = Column(Text, default="")
     cover_letter_preview = Column(String(200), default="")
     form_data = Column(JSON, default=dict)
+    tailored_resume_path = Column(String, default="")
 
     # ── Lifecycle ──────────────────────────────────────────────────────────
     status = Column(
@@ -64,3 +67,45 @@ class JobApplication(Base):
 
     def __repr__(self) -> str:
         return f"<JobApplication {self.job_id} | {self.company} | {self.status}>"
+
+
+class CandidateProfile(Base):
+    __tablename__ = "candidate_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    resume_id = Column(String, unique=True, index=True, nullable=False)
+    
+    full_name = Column(String, default="")
+    email = Column(String, default="")
+    seniority = Column(String, default="")
+    years_exp = Column(Integer, default=0)
+    summary = Column(Text, default="")
+    skills = Column(JSON, default=list)
+    tech_stack = Column(JSON, default=list)
+    
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    def __repr__(self) -> str:
+        return f"<CandidateProfile {self.resume_id} | {self.full_name}>"
+
+
+class JobCache(Base):
+    __tablename__ = "job_cache"
+
+    id = Column(Integer, primary_key=True, index=True)
+    url = Column(String, unique=True, index=True, nullable=False)
+    
+    company = Column(String, default="")
+    title = Column(String, default="")
+    extracted_skills = Column(JSON, default=list)
+    seniority = Column(String, default="")
+    years_required = Column(Integer, default=0)
+    company_logo = Column(String, default="")
+    platform = Column(String, default="")
+    
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    def __repr__(self) -> str:
+        return f"<JobCache {self.url} | {self.company}>"

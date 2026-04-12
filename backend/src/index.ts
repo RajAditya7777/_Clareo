@@ -10,6 +10,7 @@ import { matchResumeJobAction }  from "./actions/match_resume_job";
 import { draftApplicationAction } from "./actions/draft_application";
 import { autoApplyAction }       from "./actions/auto_apply";
 import { trackApplicationAction } from "./actions/track_application";
+import { tailorCV }               from "./actions/tailor_cv";
 
 // ── CLI Arg Parsing ──────────────────────────────────────────────────────────
 function parseArgs() {
@@ -69,10 +70,10 @@ async function runStep(stepName: string, fn: () => Promise<unknown>) {
 
 // ── Main pipeline ────────────────────────────────────────────────────────────
 async function main() {
-  const { resume: resumeId, search: searchQuery } = parseArgs();
+  const { resume: resumeId, search: searchQuery, profile: injectedProfile } = parseArgs();
 
   if (!resumeId || !searchQuery) {
-    emit({ status: "error", message: "Usage: bun run index.ts --resume=<id> --search=<query>" });
+    emit({ status: "error", message: "Usage: bun run index.ts --resume=<id> --search=<query> [--profile=<json>]" });
     process.exit(1);
   }
 
@@ -81,6 +82,8 @@ async function main() {
     emit({ status: "error", message: "FIRECRAWL_API_KEY is not set in .env" });
     process.exit(1);
   }
+
+  const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
 
   process.stderr.write(`[Clariyo] Starting 7-agent pipeline — resume=${resumeId} search="${searchQuery}"\n`);
 
@@ -112,25 +115,47 @@ async function main() {
       title: r.title ?? searchQuery,
       location: "Remote",
       url: r.url ?? r.sourceURL ?? "",
-      description: r.markdown ?? r.content ?? r.description ?? ""
+      description: r.markdown ?? r.content ?? r.description ?? "",
+      platform: r.url?.includes("lever.co") ? "Lever" : r.url?.includes("greenhouse.io") ? "Greenhouse" : r.url?.includes("linkedin.com") ? "LinkedIn" : "Other",
+      company_logo: `https://logo.clearbit.com/${(r.url ?? "").split("/")[2]?.replace("www.", "")}`
     }));
   });
   if (!step1.ok) { emit({ status: "error", step: "SCRAPE_JOBS", message: step1.error }); process.exit(1); }
   const jobs = step1.data as { id: string; company: string; title: string; location: string; url: string; description: string }[];
   pipelineResults.jobs_found = jobs.length;
 
-  // ── Step 3: PARSE_RESUME ────────────────────────────────────────────────
-  const step3 = await runStep("PARSE_RESUME", async () => {
-    const system = `You are a resume parser. Extract structured information.
+  // ── Step 3: PARSE_RESUME (Cache-aware) ──────────────────────────────────
+  let resumeProfile: any;
+  if (injectedProfile) {
+    const step3 = await runStep("PARSE_RESUME", async () => {
+      process.stderr.write(`[Clariyo]   Using injected profile for resume: ${resumeId}\n`);
+      return JSON.parse(Buffer.from(injectedProfile, 'base64').toString());
+    });
+    resumeProfile = step3.data;
+  } else {
+    const step3 = await runStep("PARSE_RESUME", async () => {
+      const system = `You are a resume parser. Extract structured information.
 Return ONLY valid JSON:
 {"name":"","email":"","skills":[],"seniority":"","years_exp":0,"tech_stack":[],"summary":"","education":"","recent_titles":[]}`;
-    const user = `Resume ID: ${resumeId}\n\nParse the resume for this candidate and return their profile.`;
-    const text = await callLLM(system, user);
-    try { return JSON.parse(text.replace(/```json\n?|```/g, "").trim()); }
-    catch { return { skills: [], seniority: "Mid-Level", years_exp: 2, summary: `Resume: ${resumeId}` }; }
-  });
-  const resumeProfile = step3.data ?? {};
-  pipelineResults.resume_parsed = !!(resumeProfile as Record<string, unknown>).skills;
+      const user = `Resume ID: ${resumeId}\n\nParse the resume for this candidate and return their profile.`;
+      const text = await callLLM(system, user);
+      const parsed = JSON.parse(text.replace(/```json\n?|```/g, "").trim());
+      
+      // Save it back to the backend cache
+      try {
+        await fetch(`${backendUrl}/profiles`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resume_id: resumeId, ...parsed })
+        });
+      } catch (e) { process.stderr.write(`[Clariyo]   Warning: Could not save profile to cache: ${e}\n`); }
+      
+      return parsed;
+    });
+    resumeProfile = step3.data ?? { skills: [], seniority: "Mid-Level", years_exp: 2, summary: `Resume: ${resumeId}` };
+  }
+  
+  pipelineResults.resume_parsed = !!resumeProfile?.skills;
 
   const processedJobs = [];
 
@@ -138,13 +163,45 @@ Return ONLY valid JSON:
   for (const job of jobs.slice(0, 5)) { // max 5 jobs
     process.stderr.write(`[Clariyo]   Processing: ${job.title} @ ${job.company}\n`);
 
-    // Step 2: ANALYZE_JD
+    // Step 2: ANALYZE_JD (Cache-aware)
     const jdStep = await runStep(`ANALYZE_JD:${job.company}`, async () => {
+      // 1. Check cache first
+      try {
+        const cacheRes = await fetch(`${backendUrl}/job-cache?url=${encodeURIComponent(job.url)}`);
+        if (cacheRes.ok) {
+          const cachedData = await cacheRes.json();
+          if (cachedData) {
+            process.stderr.write(`[Clariyo]     Cache Hit for JD analysis: ${job.url}\n`);
+            return cachedData;
+          }
+        }
+      } catch (e) { /* ignore cache errors */ }
+
+      // 2. Not in cache -> Analyze with LLM
       const system = `You are a job description analyzer. Return ONLY valid JSON:
 {"required_skills":[],"optional_skills":[],"seniority":"","years_required":0,"responsibilities":[],"location":"","salary_range":null}`;
       const text = await callLLM(system, `Analyze this job description:\n\n${job.description.slice(0, 3000)}`);
-      try { return JSON.parse(text.replace(/```json\n?|```/g, "").trim()); }
-      catch { return { required_skills: [], optional_skills: [], seniority: "Mid-Level", years_required: 0 }; }
+      const parsed = JSON.parse(text.replace(/```json\n?|```/g, "").trim());
+      
+      // 3. Save to cache
+      try {
+        await fetch(`${backendUrl}/job-cache`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            url: job.url, 
+            company: job.company, 
+            title: job.title,
+            extracted_skills: parsed.required_skills,
+            seniority: parsed.seniority,
+            years_required: parsed.years_required,
+            company_logo: job.company_logo,
+            platform: job.platform
+          })
+        });
+      } catch (e) { /* ignore */ }
+
+      return parsed;
     });
     const jdReqs = jdStep.data ?? {};
 
@@ -162,8 +219,8 @@ Score 0-100. recommendation: APPLY if >75, BORDERLINE if 50-75, SKIP if <50.`;
 
     let draft: { cover_letter?: string, form_data?: unknown } | null = null;
 
-    // Step 5: DRAFT_APPLICATION (only if score > 75)
-    if (match.score >= 75) {
+    // Step 5: DRAFT_APPLICATION (only if score >= 60)
+    if (match.score >= 60) {
       const draftStep = await runStep(`DRAFT:${job.company}`, async () => {
         const system = `You are an expert cover letter writer. Return ONLY valid JSON:
 {"cover_letter":"","form_data":{"full_name":"","email":"","desired_salary":"market rate","how_did_you_hear":"Job board"}}`;
@@ -176,6 +233,12 @@ Match analysis: ${JSON.stringify(match)}`;
         catch { return { cover_letter: `Application for ${job.title} at ${job.company}`, form_data: {} }; }
       });
       draft = draftStep.data as { cover_letter?: string, form_data?: unknown };
+
+      // Step 5.5: TAILOR_CV
+      const tailorStep = await runStep(`TAILOR:${job.company}`, async () => {
+        return await tailorCV(resumeProfile, jdReqs, job.id);
+      });
+      const tailoredResumePath = tailorStep.data as string;
 
       // Step 6: AUTO_APPLY — stage for human approval
       await runStep(`STAGE:${job.company}`, async () => {
@@ -196,6 +259,9 @@ Match analysis: ${JSON.stringify(match)}`;
               recommendation: match.recommendation,
               cover_letter: draft?.cover_letter ?? "",
               form_data: draft?.form_data ?? {},
+              company_logo: job.company_logo,
+              platform: job.platform,
+              tailored_resume_path: tailoredResumePath,
               status: "DRAFTED"
             })
           });
@@ -220,7 +286,9 @@ Match analysis: ${JSON.stringify(match)}`;
             matched_skills: match.matched_skills,
             missing_skills: match.missing_skills,
             recommendation: match.recommendation,
-            status: match.score >= 75 ? "DRAFTED" : "MATCHED"
+            company_logo: job.company_logo,
+            platform: job.platform,
+            status: match.score >= 60 ? "DRAFTED" : "MATCHED"
           })
         });
       } catch { /* Backend might not be up */ }
@@ -234,7 +302,9 @@ Match analysis: ${JSON.stringify(match)}`;
       recommendation: match.recommendation,
       matched_skills: match.matched_skills,
       missing_skills: match.missing_skills,
-      draft_ready: match.score >= 75
+      draft_ready: match.score >= 60,
+      platform: job.platform,
+      company_logo: job.company_logo
     });
   }
 

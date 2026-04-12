@@ -7,3 +7,4 @@ llama-index-readers-file
 llama-index-llms-openai-like
 python-dotenv
 pydantic>=2.0
+python-multipart
