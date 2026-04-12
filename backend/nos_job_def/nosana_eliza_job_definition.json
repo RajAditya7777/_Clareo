@@ -1,0 +1,15 @@
+{
+  "name": "clariyo-backend",
+  "description": "7-agent AI job application pipeline for Clariyo.",
+  "docker": "ghcr.io/[user]/clariyo-backend:latest",
+  "gpu": "nvidia-l4",
+  "duration": 3600,
+  "market": "1",
+  "command": "python backend/main.py",
+  "env": {
+    "DATABASE_URL": "@DATABASE_URL",
+    "FIRECRAWL_API_KEY": "@FIRECRAWL_API_KEY",
+    "GOOGLE_CLIENT_ID": "@GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET": "@GOOGLE_CLIENT_SECRET"
+  }
+}

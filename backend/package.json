@@ -1,0 +1,21 @@
+{
+  "name": "clariyo-backend",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "elizaos start --character ./characters/job_scraper.character.json",
+    "start:all": "elizaos start --characters ./characters/",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@elizaos/cli": "^1.7.2",
+    "@elizaos/core": "^2.0.0-alpha.77",
+    "dotenv": "^17.4.1",
+    "zod": "^4.3.6"
+  }
+}
