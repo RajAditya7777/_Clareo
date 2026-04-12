@@ -109,3 +109,58 @@ class JobCache(Base):
 
     def __repr__(self) -> str:
         return f"<JobCache {self.url} | {self.company}>"
+
+
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, default="New Chat")
+    resume_id = Column(String, index=True, nullable=True) # Link to a Role/Persona
+    
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, index=True, nullable=False)
+    role = Column(String, nullable=False) # 'user' or 'assistant'
+    content = Column(Text, nullable=False)
+    
+    # Store LlamaIndex node ID if already indexed
+    llama_node_id = Column(String, nullable=True)
+    
+    # Attachment metadata
+    attachment_name = Column(String, nullable=True)
+    attachment_path = Column(String, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(String, default="AGENT") # AGENT, SYSTEM, UPDATE
+    is_read = Column(Integer, default=0) # SQLite/Postgres compatible bool as int
+    
+    # Optional link to an application or job
+    link = Column(String, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class CareerInsight(Base):
+    __tablename__ = "career_insights"
+
+    id = Column(Integer, primary_key=True, index=True)
+    resume_id = Column(String, unique=True, index=True, nullable=False)
+    payload = Column(JSON, nullable=False)
+    
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

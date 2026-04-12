@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional, Generator
 from sqlalchemy.orm import Session
 from ..db.models import CandidateProfile
-from ..db.connection import get_session
+from ..db.connection import create_manual_session
 
 TIMEOUT_SECONDS = 120
 ELIZA_DIR = Path(__file__).resolve().parent.parent.parent
@@ -46,7 +46,12 @@ def _extract_json_from_stdout(stdout: str) -> Optional[dict]:
     return None
 
 
-def stream_agent_pipeline(resume_id: str, job_search_query: str, db: Session = None) -> Generator[str, None, None]:
+def stream_agent_pipeline(
+    resume_id: str, 
+    job_search_query: str, 
+    db: Session = None,
+    profile_data: dict = None
+) -> Generator[str, None, None]:
     """
     Execute the 7-agent ElizaOS pipeline and yield status events as SSE-formatted strings.
     """
@@ -59,23 +64,29 @@ def stream_agent_pipeline(resume_id: str, job_search_query: str, db: Session = N
 
     # Check for cached profile
     profile_arg = None
-    session = db if db else get_session()
-    try:
-        profile = session.query(CandidateProfile).filter(CandidateProfile.resume_id == resume_id).first()
-        if profile:
-            profile_data = {
-                "full_name": profile.full_name,
-                "email": profile.email,
-                "skills": profile.skills,
-                "seniority": profile.seniority,
-                "years_exp": profile.years_exp,
-                "tech_stack": profile.tech_stack,
-                "summary": profile.summary
-            }
-            profile_json = json.dumps(profile_data)
-            profile_arg = base64.b64encode(profile_json.encode()).decode()
-    finally:
-        if not db: session.close()
+    
+    # Use pre-fetched profile data if provided, otherwise fetch it
+    if profile_data:
+        profile_json = json.dumps(profile_data)
+        profile_arg = base64.b64encode(profile_json.encode()).decode()
+    else:
+        session = db if db else create_manual_session()
+        try:
+            profile = session.query(CandidateProfile).filter(CandidateProfile.resume_id == resume_id).first()
+            if profile:
+                fetched_data = {
+                    "full_name": profile.full_name,
+                    "email": profile.email,
+                    "skills": profile.skills,
+                    "seniority": profile.seniority,
+                    "years_exp": profile.years_exp,
+                    "tech_stack": profile.tech_stack,
+                    "summary": profile.summary
+                }
+                profile_json = json.dumps(fetched_data)
+                profile_arg = base64.b64encode(profile_json.encode()).decode()
+        finally:
+            if not db: session.close()
 
 
     cmd = [
@@ -109,7 +120,13 @@ def stream_agent_pipeline(resume_id: str, job_search_query: str, db: Session = N
     stdout_acc = []
     
     while True:
-        for key, _ in sel.select():
+        events = sel.select(timeout=15.0)
+        if not events and process.poll() is None:
+            # Heartbeat to keep the SSE connection alive during long silences
+            yield ": ping\n\n"
+            continue
+
+        for key, _ in events:
             line = key.fileobj.readline()
             if not line:
                 sel.unregister(key.fileobj)
@@ -125,6 +142,8 @@ def stream_agent_pipeline(resume_id: str, job_search_query: str, db: Session = N
                 stdout_acc.append(line)
 
         if process.poll() is not None:
+            # Check for any remaining output before breaking
+            # Some selectors might miss the last bits if we break too fast
             break
 
     # After process finishes, parse the accumulated stdout for the final result

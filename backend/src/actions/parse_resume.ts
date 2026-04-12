@@ -65,7 +65,7 @@ async function parseResumeWithLLM(resumeText: string): Promise<ResumeProfile> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "nosana-job-llm",
+      model: process.env.NOSANA_MODEL_NAME || "DeepSeek-R1-Distill-Qwen-7B",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: `Parse this resume:\n\n${resumeText.slice(0, 5000)}` }

@@ -4,8 +4,8 @@ export type Message = {
   id: string;
   role: "user" | "assistant";
   text: string;
-  ts: number;
-  steps?: string[];
+  attachment_name?: string;
+  attachment_path?: string;
   isStreaming?: boolean;
 };
 

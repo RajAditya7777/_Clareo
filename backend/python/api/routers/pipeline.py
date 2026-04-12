@@ -24,9 +24,19 @@ def start_pipeline(request: PipelineRequest, background_tasks: BackgroundTasks):
     }
 
 @router.get("/stream-pipeline")
-def stream_pipeline(resume_id: str, search_query: str, db: Session = Depends(get_db)):
+def stream_pipeline(resume_id: str, search_query: str):
+    # We do NOT use Depends(get_db) here because it would hold the session 
+    # open for the full duration of the StreamingResponse (up to 120s).
+    # Instead, we fetch what we need quickly and close the session.
+    from ...db.connection import create_manual_session
+    db = create_manual_session()
+    try:
+        generator = service.stream_pipeline(db, resume_id, search_query)
+    finally:
+        db.close()
+        
     return StreamingResponse(
-        service.stream_pipeline(db, resume_id, search_query),
+        generator,
         media_type="text/event-stream"
     )
 

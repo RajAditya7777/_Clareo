@@ -40,7 +40,7 @@ async function callLLM(system: string, user: string): Promise<string> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "nosana-job-llm",
+      model: process.env.NOSANA_MODEL_NAME || "DeepSeek-R1-Distill-Qwen-7B",
       messages: [
         { role: "system", content: system },
         { role: "user",   content: user   }

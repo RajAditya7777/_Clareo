@@ -60,21 +60,21 @@ class ClariyoAPI {
      */
     async getApplications(status?: ApplicationStatus): Promise<JobApplication[]> {
         const query = status ? `?status=${status}` : "";
-        return this.request<JobApplication[]>(`/applications${query}`);
+        return this.request<JobApplication[]>(`/api/applications${query}`);
     }
 
     /**
      * Get a single application by job_id.
      */
     async getApplication(jobId: string): Promise<JobApplication> {
-        return this.request<JobApplication>(`/applications/${jobId}`);
+        return this.request<JobApplication>(`/api/applications/${jobId}`);
     }
 
     /**
      * Start the 7-agent AI pipeline.
      */
     async startPipeline(searchQuery: string, resumeId: string = "default"): Promise<any> {
-        return this.request("/start-pipeline", {
+        return this.request("/api/start-pipeline", {
             method: "POST",
             body: JSON.stringify({
                 resume_id: resumeId,
@@ -88,7 +88,7 @@ class ClariyoAPI {
      * Returns the EventSource so it can be closed by the UI (Stop generation).
      */
     streamPipeline(searchQuery: string, resumeId: string = "default", onMessage: (data: any) => void, onError: (err: any) => void): EventSource {
-        const url = `${API_BASE_URL}/stream-pipeline?resume_id=${resumeId}&search_query=${encodeURIComponent(searchQuery)}`;
+        const url = `${API_BASE_URL}/api/stream-pipeline?resume_id=${resumeId}&search_query=${encodeURIComponent(searchQuery)}`;
         const eventSource = new EventSource(url);
 
         eventSource.onmessage = (event) => {
@@ -116,7 +116,7 @@ class ClariyoAPI {
      */
     async confirmApply(jobId: string, resumeId?: string): Promise<any> {
         const query = resumeId ? `?resume_id=${resumeId}` : "";
-        return this.request(`/confirm-apply/${jobId}${query}`, {
+        return this.request(`/api/confirm-apply/${jobId}${query}`, {
             method: "POST",
         });
     }
@@ -125,7 +125,7 @@ class ClariyoAPI {
      * Delete an application.
      */
     async deleteApplication(jobId: string): Promise<any> {
-        return this.request(`/applications/${jobId}`, {
+        return this.request(`/api/applications/${jobId}`, {
             method: "DELETE",
         });
     }
@@ -137,7 +137,7 @@ class ClariyoAPI {
         const formData = new FormData();
         formData.append("file", file);
 
-        const url = `${API_BASE_URL}/upload-resume`;
+        const url = `${API_BASE_URL}/api/upload-resume`;
         const response = await fetch(url, {
             method: "POST",
             body: formData,
@@ -157,6 +157,15 @@ class ClariyoAPI {
      */
     async checkHealth(): Promise<any> {
         return this.request("/health");
+    }
+
+    // ── Chat API ──────────────────────────────────────────────────────────
+    async listChats(): Promise<any[]> {
+        return this.request("/api/chats");
+    }
+
+    async deleteChat(sessionId: number): Promise<any> {
+        return this.request(`/api/chats/${sessionId}`, { method: "DELETE" });
     }
 }
 

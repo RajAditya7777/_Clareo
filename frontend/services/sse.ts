@@ -15,7 +15,7 @@ class ClariyoSSE {
         onMessage: (data: any) => void,
         onError: (err: any) => void
     ): EventSource {
-        const url = `${API_BASE_URL}/stream-pipeline?resume_id=${resumeId}&search_query=${encodeURIComponent(searchQuery)}`;
+        const url = `${API_BASE_URL}/api/stream-pipeline?resume_id=${resumeId}&search_query=${encodeURIComponent(searchQuery)}`;
         const eventSource = new EventSource(url);
 
         eventSource.onmessage = (event) => {

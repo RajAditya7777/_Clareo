@@ -1,6 +1,5 @@
-import React, { useRef, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, FileText, X } from "lucide-react";
 
 export function WaveformBars() {
   const heights = [10, 16, 12, 20, 14, 10, 18];
@@ -32,19 +31,23 @@ export function FloatingInput({
   value,
   onChange,
   onSend,
+  onUpload,
   disabled = false,
   isStreaming = false,
   onStop,
 }: {
   value: string;
   onChange: (v: string) => void;
-  onSend: () => void;
+  onSend: (file?: File) => void;
+  onUpload?: (file: File) => void;
   disabled?: boolean;
   isStreaming?: boolean;
   onStop?: () => void;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const hasContent = value.trim().length > 0;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingFile, setPendingFile] = React.useState<File | null>(null);
+  const hasContent = value.trim().length > 0 || pendingFile !== null;
 
   // Auto-grow textarea
   useEffect(() => {
@@ -57,7 +60,10 @@ export function FloatingInput({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (hasContent && !disabled) onSend();
+      if (hasContent && !disabled) {
+          onSend(pendingFile || undefined);
+          setPendingFile(null);
+      }
     }
   };
 
@@ -72,6 +78,53 @@ export function FloatingInput({
         backdropFilter: "blur(12px)",
       }}
     >
+      {/* Pending File Pill */}
+      <AnimatePresence>
+        {pendingFile && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            style={{
+              padding: "10px 14px 0",
+              display: "flex"
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "8px",
+                padding: "6px 10px",
+                color: "#fff",
+                fontSize: 13,
+              }}
+            >
+              <FileText size={14} color="#3B82F6" />
+              <span style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {pendingFile.name}
+              </span>
+              <button
+                onClick={() => setPendingFile(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "rgba(255,255,255,0.4)",
+                  cursor: "pointer",
+                  display: "flex",
+                  padding: 2,
+                }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Top Row: textarea + send button */}
       <div style={{ display: "flex", alignItems: "flex-end", padding: "12px 14px 10px" }}>
         <textarea
@@ -102,7 +155,12 @@ export function FloatingInput({
         {/* Send dot button */}
         <motion.button
           whileTap={{ scale: 0.9 }}
-          onClick={() => !disabled && hasContent && onSend()}
+          onClick={() => {
+              if(!disabled && hasContent) {
+                 onSend(pendingFile || undefined);
+                 setPendingFile(null);
+              }
+          }}
           style={{
             width: 30,
             height: 30,
@@ -135,6 +193,7 @@ export function FloatingInput({
         }}
       >
         <button
+          onClick={() => fileInputRef.current?.click()}
           style={{
             width: 26,
             height: 26,
@@ -150,6 +209,21 @@ export function FloatingInput({
         >
           <Plus size={13} />
         </button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+                setPendingFile(file);
+                if (onUpload) onUpload(file);
+            }
+            // Clear input so same file can be uploaded again
+            e.target.value = "";
+          }}
+          style={{ display: "none" }}
+          accept=".pdf,.doc,.docx"
+        />
         <div style={{ flex: 1, textAlign: "center" }}>
           <span
             style={{

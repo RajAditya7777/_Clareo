@@ -2,12 +2,15 @@ import { useState, useRef, useCallback } from "react";
 import { sse } from "@/services/sse";
 import { Message } from "@/components/chat/types";
 
+import { http } from "@/services/http";
+
 interface UsePipelineProps {
     resumeId: string | null;
+    sessionId: number | null;
     setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
 }
 
-export function usePipeline({ resumeId, setMessages }: UsePipelineProps) {
+export function usePipeline({ resumeId, sessionId, setMessages }: UsePipelineProps) {
     const [isPipelineRunning, setIsPipelineRunning] = useState(false);
     const streamRef = useRef<EventSource | null>(null);
 
@@ -57,38 +60,44 @@ export function usePipeline({ resumeId, setMessages }: UsePipelineProps) {
                     );
                 } else if (data.type === "result") {
                     const res = data.data;
+                    const resultText = `Found ${res.jobs_found} jobs. ${res.jobs_processed} high-match roles are ready in your Opportunities dashboard.`;
                     setIsPipelineRunning(false);
                     setMessages((prev) =>
                         prev.map((m) =>
                             m.id === assistantMsgId
-                                ? { ...m, isStreaming: false, text: `Found ${res.jobs_found} jobs. ${res.jobs_processed} high-match roles are ready in your Opportunities dashboard.` }
+                                ? { ...m, isStreaming: false, text: resultText }
                                 : m
                         )
                     );
+                    if (sessionId) http.addMessage(sessionId, "assistant", resultText);
                 } else if (data.type === "error") {
+                    const errorText = `Pipeline error: ${data.message}`;
                     setIsPipelineRunning(false);
                     setMessages((prev) =>
                         prev.map((m) =>
                             m.id === assistantMsgId
-                                ? { ...m, isStreaming: false, text: `Pipeline error: ${data.message}` }
+                                ? { ...m, isStreaming: false, text: errorText }
                                 : m
                         )
                     );
+                    if (sessionId) http.addMessage(sessionId, "assistant", errorText);
                 }
             },
             (err) => {
                 console.error("SSE error:", err);
+                const disconnectText = "Lost connection to HQ. Please check if the backend is running.";
                 setIsPipelineRunning(false);
                 setMessages((prev) =>
                     prev.map((m) =>
                         m.id === assistantMsgId
-                            ? { ...m, isStreaming: false, text: "Lost connection to HQ. Please check if the backend is running." }
+                            ? { ...m, isStreaming: false, text: disconnectText }
                             : m
                     )
                 );
+                if (sessionId) http.addMessage(sessionId, "assistant", disconnectText);
             }
         );
-    }, [resumeId, setMessages]);
+    }, [resumeId, sessionId, setMessages]);
 
     return {
         isPipelineRunning,

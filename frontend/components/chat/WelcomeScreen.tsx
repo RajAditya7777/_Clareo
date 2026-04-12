@@ -4,9 +4,9 @@ import { ResumeUpload } from "../ResumeUpload";
 import { FloatingInput } from "./FloatingInput";
 
 const CHIPS = [
-  "I am a freelancer",
-  "I am a client looking for talent",
-  "Check my active projects",
+  "Find me a Senior React role",
+  "Scout promising startups in Berlin",
+  "Apply to remote mid-level Node.js jobs",
 ];
 
 export function WelcomeScreen({

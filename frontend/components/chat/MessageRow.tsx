@@ -1,15 +1,5 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Copy, ThumbsUp, ThumbsDown, RotateCcw } from "lucide-react";
-
-export type Message = {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  ts: number;
-  steps?: string[];
-  isStreaming?: boolean;
-};
+import { Message } from "./types";
+import { FileText } from "lucide-react";
 
 // ─── Claude-style 8-spoke Asterisk Typing Indicator ────────────────────────────
 export function ClaudeTypingIndicator() {
@@ -148,8 +138,29 @@ export function MessageRow({ msg }: { msg: Message }) {
             lineHeight: 1.6,
             color: "#fff",
             fontFamily: "var(--font-inter, system-ui, sans-serif)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
           }}
         >
+          {msg.attachment_name && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 8,
+                padding: "6px 10px",
+                alignSelf: "flex-start",
+                marginBottom: 2,
+              }}
+            >
+              <FileText size={14} color="#3B82F6" />
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.8)" }}>{msg.attachment_name}</span>
+            </div>
+          )}
           {msg.text}
         </div>
       </motion.div>

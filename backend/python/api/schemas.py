@@ -67,3 +67,92 @@ class HealthResponse(BaseModel):
     version: str
     database: Optional[str] = None
     eliza_agents: Optional[int] = None
+
+
+# ── Chat & Memory ──────────────────────────────────────────────────────────
+
+class ChatMessagePayload(BaseModel):
+    role: str
+    content: str
+    attachment_name: Optional[str] = None
+    attachment_path: Optional[str] = None
+
+class ChatSessionPayload(BaseModel):
+    title: str = "New Chat"
+    resume_id: Optional[str] = None
+
+class ChatMessageResponse(BaseModel):
+    id: int
+    session_id: int
+    role: str
+    content: str
+    attachment_name: Optional[str] = None
+    attachment_path: Optional[str] = None
+    created_at: Any
+    model_config = ConfigDict(from_attributes=True)
+
+class ChatSessionResponse(BaseModel):
+    id: int
+    title: str
+    resume_id: Optional[str] = None
+    created_at: Any
+    updated_at: Any
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ── Career Insights ────────────────────────────────────────────────────────
+
+class SalaryImpact(BaseModel):
+    skill: str
+    impact: str
+    percent: int
+
+class HiringDemand(BaseModel):
+    skill: str
+    demand: str
+    value: int
+
+class RoleOpportunity(BaseModel):
+    role: str
+    current: str
+    transition_difficulty: str
+
+class MarketInsights(BaseModel):
+    top_companies: List[str]
+    trends: List[str]
+
+class SkillGapItem(BaseModel):
+    skill: str
+    importance: int
+    status: str
+
+class EmergingRole(BaseModel):
+    role: str
+    growth_rate: str
+
+class LearningPriorityItem(BaseModel):
+    skill: str
+    roi: int
+    reason: str
+
+class CareerDashboardResponse(BaseModel):
+    salary_impact: List[SalaryImpact]
+    hiring_demand: List[HiringDemand]
+    role_opportunities: List[RoleOpportunity]
+    market_insights: MarketInsights
+    skill_gap: List[SkillGapItem]
+    emerging_roles: List[EmergingRole]
+    learning_priority: List[LearningPriorityItem]
+
+
+# ── Notifications ──────────────────────────────────────────────────────────
+
+class NotificationResponse(BaseModel):
+    id: int
+    title: str
+    message: str
+    type: str
+    is_read: bool
+    link: Optional[str] = None
+    created_at: Any
+    model_config = ConfigDict(from_attributes=True)

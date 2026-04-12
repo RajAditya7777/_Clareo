@@ -9,3 +9,7 @@ class ProfileRepository(BaseRepository[CandidateProfile]):
 
     def get_by_resume_id(self, db: Session, resume_id: str) -> Optional[CandidateProfile]:
         return db.query(self.model).filter(self.model.resume_id == resume_id).first()
+
+    def list_all_roles(self, db: Session) -> list[CandidateProfile]:
+        """Fetch all saved candidate personas."""
+        return db.query(self.model).order_by(self.model.created_at.desc()).all()

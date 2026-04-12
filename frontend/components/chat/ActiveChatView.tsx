@@ -14,6 +14,7 @@ export function ActiveChatView({
   intakeState,
   onIntakeAnswer,
   onIntakeSkip,
+  onUpload,
   isStreaming,
   onStop,
 }: {
@@ -21,10 +22,11 @@ export function ActiveChatView({
   isTyping: boolean;
   value: string;
   onChange: (v: string) => void;
-  onSend: () => void;
+  onSend: (file?: File) => void;
   intakeState: IntakeState;
   onIntakeAnswer: (answer: string) => void;
   onIntakeSkip: () => void;
+  onUpload?: (file: File) => void;
   isStreaming?: boolean;
   onStop?: () => void;
 }) {
@@ -100,6 +102,7 @@ export function ActiveChatView({
             value={value}
             onChange={onChange}
             onSend={onSend}
+            onUpload={onUpload}
             disabled={intakeState.active}
             isStreaming={isStreaming}
             onStop={onStop}

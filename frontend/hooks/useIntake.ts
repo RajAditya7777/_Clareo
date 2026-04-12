@@ -1,7 +1,10 @@
 import { useState, useCallback } from "react";
 import { Message, IntakeState, INTAKE_QUESTIONS, EMPTY_INTAKE } from "@/components/chat/types";
 
+import { http } from "@/services/http";
+
 interface UseIntakeProps {
+    sessionId: number | null;
     setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
     fireSearch: (query: string) => void;
 }
@@ -17,27 +20,29 @@ function buildSearchQuery(intake: IntakeState): string {
     return parts.length > 0 ? parts.join(" ") : intake.originalQuery;
 }
 
-export function useIntake({ setMessages, fireSearch }: UseIntakeProps) {
+export function useIntake({ sessionId, setMessages, fireSearch }: UseIntakeProps) {
     const [intakeState, setIntakeState] = useState<IntakeState>(EMPTY_INTAKE);
 
     const startIntake = useCallback((originalQuery: string) => {
         const firstQ = INTAKE_QUESTIONS[0];
+        const assistantText = `Sure! Let me gather a few details so I can find the best matches for you.\n\n${firstQ.question}`;
         setMessages((prev) => [
             ...prev,
             {
                 id: crypto.randomUUID(),
                 role: "assistant",
-                text: `Sure! Let me gather a few details so I can find the best matches for you.\n\n${firstQ.question}`,
+                text: assistantText,
                 ts: Date.now(),
             },
         ]);
+        if (sessionId) http.addMessage(sessionId, "assistant", assistantText);
         setIntakeState({
             active: true,
             questionIndex: 0,
             answers: {},
             originalQuery,
         });
-    }, [setMessages]);
+    }, [sessionId, setMessages]);
 
     const handleIntakeAnswer = useCallback((answer: string) => {
         const currentQ = INTAKE_QUESTIONS[intakeState.questionIndex];
@@ -48,6 +53,7 @@ export function useIntake({ setMessages, fireSearch }: UseIntakeProps) {
             ...prev,
             { id: crypto.randomUUID(), role: "user", text: answer, ts: Date.now() },
         ]);
+        if (sessionId) http.addMessage(sessionId, "user", answer);
 
         const nextIndex = intakeState.questionIndex + 1;
 
@@ -56,15 +62,17 @@ export function useIntake({ setMessages, fireSearch }: UseIntakeProps) {
             setIntakeState(EMPTY_INTAKE);
             const finalState: IntakeState = { ...intakeState, answers: updatedAnswers };
             const query = buildSearchQuery(finalState);
+            const searchMsg = `Perfect! Searching for: **${query}**`;
             setMessages((prev) => [
                 ...prev,
                 {
                     id: crypto.randomUUID(),
                     role: "assistant",
-                    text: `Perfect! Searching for: **${query}**`,
+                    text: searchMsg,
                     ts: Date.now(),
                 },
             ]);
+            if (sessionId) http.addMessage(sessionId, "assistant", searchMsg);
             fireSearch(query);
         } else {
             // Ask next question
@@ -73,9 +81,10 @@ export function useIntake({ setMessages, fireSearch }: UseIntakeProps) {
                 ...prev,
                 { id: crypto.randomUUID(), role: "assistant", text: nextQ.question, ts: Date.now() },
             ]);
+            if (sessionId) http.addMessage(sessionId, "assistant", nextQ.question);
             setIntakeState({ ...intakeState, questionIndex: nextIndex, answers: updatedAnswers });
         }
-    }, [intakeState, setMessages, fireSearch]);
+    }, [intakeState, sessionId, setMessages, fireSearch]);
 
     const handleIntakeSkip = useCallback(() => {
         const currentQ = INTAKE_QUESTIONS[intakeState.questionIndex];
