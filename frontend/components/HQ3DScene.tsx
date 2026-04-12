@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, Suspense, useEffect } from "react";
+import { useRef, Suspense, useEffect, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
+import { motion, AnimatePresence } from "framer-motion";
 import * as THREE from "three";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -29,14 +30,110 @@ const WH  = "#e8e8e0"; // whiteboard
 
 // ─── Agents ───────────────────────────────────────────────────────────────────
 const AGENTS = [
-  { name: "Luke",    outfit: "#3a8a9a", skin: "#c68642", pants: "#1a2a3a" },
-  { name: "Allan",   outfit: "#2a5a6a", skin: "#a05028", pants: "#1a2030" },
-  { name: "Ben",     outfit: "#2a9090", skin: "#c8a060", pants: "#1a2a3a" },
-  { name: "Cory",    outfit: "#c83060", skin: "#d09060", pants: "#1a1a2a" },
-  { name: "neviton", outfit: "#c83070", skin: "#8a401a", pants: "#181828" },
-  { name: "Susie",   outfit: "#7a7830", skin: "#d4a070", pants: "#2a2a1a" },
-  { name: "Rex",     outfit: "#5050c0", skin: "#c8a060", pants: "#1a1a3a" },
-  { name: "Maya",    outfit: "#a03080", skin: "#d4a070", pants: "#2a1a2a" },
+  {
+    name: "Luke",
+    outfit: "#3a8a9a", skin: "#c68642", pants: "#1a2a3a",
+    role: "Job Scraper",
+    emoji: "🔍",
+    accent: "#3a8a9a",
+    status: "Scraping web 24/7",
+    tasks: [
+      "Crawls LinkedIn, Greenhouse & Lever",
+      "Extracts job titles, salaries & stacks",
+      "Feeds raw listings to the pipeline",
+    ],
+  },
+  {
+    name: "Allan",
+    outfit: "#2a5a6a", skin: "#a05028", pants: "#1a2030",
+    role: "Resume Parser",
+    emoji: "📄",
+    accent: "#2a7a9a",
+    status: "Parsing your profile",
+    tasks: [
+      "Reads and chunks your PDF resume",
+      "Extracts skills, stack & seniority",
+      "Builds your professional DNA vector",
+    ],
+  },
+  {
+    name: "Ben",
+    outfit: "#2a9090", skin: "#c8a060", pants: "#1a2a3a",
+    role: "JD Analyst",
+    emoji: "🧠",
+    accent: "#2a9090",
+    status: "Analysing job descriptions",
+    tasks: [
+      "Decodes must-have vs nice-to-have skills",
+      "Scores seniority and culture signals",
+      "Flags salary range & remote policy",
+    ],
+  },
+  {
+    name: "Cory",
+    outfit: "#c83060", skin: "#d09060", pants: "#1a1a2a",
+    role: "Match Maker",
+    emoji: "🎯",
+    accent: "#c83060",
+    status: "Running similarity scores",
+    tasks: [
+      "Computes semantic match score 0–100",
+      "Ranks jobs by fit for your goals",
+      "Filters out roles below 60% match",
+    ],
+  },
+  {
+    name: "neviton",
+    outfit: "#c83070", skin: "#8a401a", pants: "#181828",
+    role: "Ghost Writer",
+    emoji: "✍️",
+    accent: "#c83070",
+    status: "Drafting cover letters",
+    tasks: [
+      "Writes tailored cover letters per job",
+      "Adapts tone to company culture",
+      "Generates ATS-optimised resume summaries",
+    ],
+  },
+  {
+    name: "Susie",
+    outfit: "#7a7830", skin: "#d4a070", pants: "#2a2a1a",
+    role: "Auto Applier",
+    emoji: "🤖",
+    accent: "#a0a030",
+    status: "Filling application forms",
+    tasks: [
+      "Navigates Greenhouse & Lever forms",
+      "Auto-fills fields from your profile",
+      "Submits applications on your behalf",
+    ],
+  },
+  {
+    name: "Rex",
+    outfit: "#5050c0", skin: "#c8a060", pants: "#1a1a3a",
+    role: "Tracker",
+    emoji: "📊",
+    accent: "#5050c0",
+    status: "Logging all applications",
+    tasks: [
+      "Saves every submission to your dashboard",
+      "Monitors status changes & rejections",
+      "Alerts you when interviews are scheduled",
+    ],
+  },
+  {
+    name: "Maya",
+    outfit: "#a03080", skin: "#d4a070", pants: "#2a1a2a",
+    role: "Market Intel",
+    emoji: "📊",
+    accent: "#a03080",
+    status: "Monitoring market trends",
+    tasks: [
+      "Tracks salary benchmarks by role",
+      "Spots rising & declining tech stacks",
+      "Reports weekly demand shifts to you",
+    ],
+  },
 ];
 
 // Roaming zones for agents (spread around the office)
@@ -321,6 +418,7 @@ function AgentAvatar({
   const rightLegRef  = useRef<THREE.Mesh>(null!);
   const leftArmRef   = useRef<THREE.Mesh>(null!);
   const rightArmRef  = useRef<THREE.Mesh>(null!);
+  const [hovered, setHovered] = useState(false);
 
   const phase  = (idx / AGENTS.length) * Math.PI * 2;
   const radius = 0.55 + (idx % 4) * 0.12;
@@ -344,11 +442,15 @@ function AgentAvatar({
   });
 
   return (
-    <group ref={groupRef}>
+    <group
+      ref={groupRef}
+      onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
+      onPointerOut={() => setHovered(false)}
+    >
       {/* Head */}
       <mesh position={[0, 1.38, 0]} castShadow>
         <boxGeometry args={[0.32, 0.32, 0.32]} />
-        <meshLambertMaterial color={agent.skin} />
+        <meshLambertMaterial color={hovered ? "#ffffff" : agent.skin} />
       </mesh>
       {/* Eyes */}
       {[-0.07, 0.07].map((ex, i) => (
@@ -382,26 +484,83 @@ function AgentAvatar({
         <boxGeometry args={[0.13, 0.42, 0.15]} />
         <meshLambertMaterial color={agent.pants} />
       </mesh>
-      {/* Name tag */}
-      <Html position={[0, 1.78, 0]} center style={{ pointerEvents: "none", whiteSpace: "nowrap" }}>
-        <div style={{
-          background: "rgba(0,0,0,0.85)",
-          color: "#fff",
-          padding: "2px 8px 2px 7px",
-          borderRadius: "2px",
-          fontSize: "12px",
-          fontWeight: "700",
-          fontFamily: "system-ui,sans-serif",
-          display: "flex",
-          alignItems: "center",
-          gap: "5px",
-          letterSpacing: "0.02em",
-          boxShadow: "0 1px 6px rgba(0,0,0,0.6)",
-          userSelect: "none",
-        }}>
-          {agent.name}
-          <span style={{ color: "#e84848", fontSize: "9px" }}>●</span>
-        </div>
+      {/* Name tag and Tooltip */}
+      <Html 
+        position={[0, 1.78, 0]} 
+        center 
+        style={{ 
+          pointerEvents: "none", 
+          whiteSpace: "nowrap",
+          zIndex: hovered ? 100 : 1
+        }}
+      >
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            style={{
+              background: "rgba(10, 10, 12, 0.92)",
+              backdropFilter: "blur(12px)",
+              color: "#fff",
+              padding: hovered ? "12px 16px" : "4px 10px",
+              borderRadius: hovered ? "12px" : "6px",
+              fontSize: "12px",
+              fontFamily: "var(--font-inter, system-ui, sans-serif)",
+              display: "flex",
+              flexDirection: "column",
+              gap: hovered ? "8px" : "0px",
+              boxShadow: hovered 
+                ? "0 10px 25px rgba(0,0,0,0.4), 0 0 1px rgba(255,255,255,0.1) inset" 
+                : "0 4px 12px rgba(0,0,0,0.3)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              minWidth: hovered ? 220 : "auto",
+              pointerEvents: "none",
+            }}
+          >
+            {/* Header: Name + Status */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{agent.name}</span>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 500, background: "rgba(255,255,255,0.06)", padding: "2px 6px", borderRadius: 4 }}>
+                  {agent.role}
+                </span>
+              </div>
+              <span style={{ color: "#10B981", fontSize: 10 }}>●</span>
+            </div>
+
+            {/* Expanded content on hover */}
+            {hovered && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                style={{ display: "flex", flexDirection: "column", gap: 8 }}
+              >
+                <div style={{ 
+                  fontSize: 11, 
+                  color: "rgba(255,255,255,0.6)", 
+                  fontStyle: "italic",
+                  lineHeight: 1.4
+                }}>
+                  "{agent.status}"
+                </div>
+                
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: "rgba(255,255,255,0.3)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                    Core Responsibilities
+                  </div>
+                  {agent.tasks.map((task, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6, fontSize: 11, color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>
+                      <span style={{ color: agent.accent, marginTop: 1 }}>•</span>
+                      {task}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </Html>
     </group>
   );
@@ -619,31 +778,6 @@ function SceneContent() {
   );
 }
 
-// ─── Agent chip ───────────────────────────────────────────────────────────────
-const CHIP_COLORS = ["#7a5098","#b09030","#2a9090","#2a8090","#e83080","#b0b030","#5050c0","#a03080"];
-
-function AgentChip({ name, color }: { name: string; color: string }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 6,
-      padding: "4px 10px 4px 6px",
-      borderRadius: 20,
-      background: "rgba(10,10,12,0.85)",
-      border: "1px solid rgba(255,255,255,0.12)",
-      backdropFilter: "blur(6px)",
-      fontSize: 12, fontWeight: 600, color: "#fff",
-      fontFamily: "system-ui,sans-serif", whiteSpace: "nowrap",
-      letterSpacing: "0.02em",
-    }}>
-      <span style={{
-        width: 14, height: 14, borderRadius: "50%", background: color,
-        flexShrink: 0, boxShadow: `0 0 6px ${color}88`,
-      }} />
-      {name}
-      <span style={{ color: "#aaa", fontSize: 10, marginLeft: 2 }}>⚙</span>
-    </div>
-  );
-}
 
 // ─── Loader ───────────────────────────────────────────────────────────────────
 function HQLoader() {
@@ -668,75 +802,21 @@ function HQLoader() {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export function HQ3DScene({ title = "CLAREO HEADQUARTERS" }: { title?: string }) {
+export function HQ3DScene() {
   return (
     <div style={{ width: "100%", height: "100%", position: "relative", background: "#1a1408", overflow: "hidden" }}>
-
-      {/* ── HEADER ── */}
-      <div style={{
-        position: "absolute", top: 0, left: 0, right: 0, zIndex: 20,
-        background: "rgba(10,10,12,0.92)",
-        borderBottom: "1px solid rgba(255,255,255,0.1)",
-        backdropFilter: "blur(8px)",
-        padding: "8px 14px",
-        display: "flex", alignItems: "center", gap: 10,
-      }}>
-        {["⊡", "⬚", "⬛"].map((ico, i) => (
-          <div key={i} style={{
-            width: 26, height: 26, borderRadius: 6,
-            background: "rgba(255,255,255,0.07)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 12, color: "#aaa", cursor: "pointer",
-          }}>{ico}</div>
-        ))}
-        <div style={{
-          flex: 1, textAlign: "center",
-          fontSize: 11, fontWeight: 700, letterSpacing: "0.28em",
-          color: "#c8c8b0", fontFamily: "monospace",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 16,
-        }}>
-          <span style={{ flex: 1, height: 1, background: "linear-gradient(to left,#c8c8b060,transparent)" }} />
-          {title}
-          <span style={{ flex: 1, height: 1, background: "linear-gradient(to right,#c8c8b060,transparent)" }} />
-        </div>
-        <div style={{
-          writingMode: "vertical-rl", fontSize: 9, letterSpacing: "0.2em",
-          color: "#888", fontFamily: "monospace",
-          background: "rgba(255,255,255,0.05)", padding: "6px 4px",
-          borderRadius: 4, cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)",
-        }}>COLLAPSE HQ</div>
-      </div>
-
-      {/* ── AGENT CHIPS ── */}
-      <div style={{
-        position: "absolute", top: 44, left: 0, right: 0, zIndex: 20,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        gap: 8, padding: "5px 14px",
-        background: "rgba(10,10,12,0.72)",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-        flexWrap: "wrap",
-      }}>
-        {AGENTS.map((a, i) => (
-          <AgentChip key={a.name} name={a.name} color={CHIP_COLORS[i]} />
-        ))}
-      </div>
-
-      {/* ── CANVAS ── */}
-      <div style={{ position: "absolute", inset: 0, top: 90 }}>
-        <Suspense fallback={<HQLoader />}>
-          <Canvas
-            orthographic
-            shadows
-            camera={{ zoom: 52, near: -300, far: 600 }}
-            gl={{ antialias: true, alpha: false }}
-            style={{ background: "#1a1408" }}
-            dpr={[1, 1.5]}
-          >
-            <SceneContent />
-          </Canvas>
-        </Suspense>
-      </div>
+      <Suspense fallback={<HQLoader />}>
+        <Canvas
+          orthographic
+          shadows
+          camera={{ zoom: 52, near: -300, far: 600 }}
+          gl={{ antialias: true, alpha: false }}
+          style={{ width: "100%", height: "100%", background: "#1a1408" }}
+          dpr={[1, 1.5]}
+        >
+          <SceneContent />
+        </Canvas>
+      </Suspense>
     </div>
   );
 }

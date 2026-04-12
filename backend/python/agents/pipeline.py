@@ -9,9 +9,10 @@ import os
 import shutil
 import base64
 from pathlib import Path
+from typing import Optional, Generator
 from sqlalchemy.orm import Session
 from ..db.models import CandidateProfile
-from ..db.connection import SessionLocal
+from ..db.connection import get_session
 
 TIMEOUT_SECONDS = 120
 ELIZA_DIR = Path(__file__).resolve().parent.parent.parent
@@ -33,8 +34,6 @@ def _find_bun() -> str:
     return bun
 
 
-from typing import Optional
-
 def _extract_json_from_stdout(stdout: str) -> Optional[dict]:
     """Find the last valid JSON line in stdout (Eliza emits it as the final line)."""
     for line in reversed(stdout.strip().split("\n")):
@@ -46,8 +45,6 @@ def _extract_json_from_stdout(stdout: str) -> Optional[dict]:
                 continue
     return None
 
-
-from typing import Optional, Generator
 
 def stream_agent_pipeline(resume_id: str, job_search_query: str, db: Session = None) -> Generator[str, None, None]:
     """
@@ -62,7 +59,7 @@ def stream_agent_pipeline(resume_id: str, job_search_query: str, db: Session = N
 
     # Check for cached profile
     profile_arg = None
-    session = db if db else SessionLocal()
+    session = db if db else get_session()
     try:
         profile = session.query(CandidateProfile).filter(CandidateProfile.resume_id == resume_id).first()
         if profile:
@@ -79,6 +76,7 @@ def stream_agent_pipeline(resume_id: str, job_search_query: str, db: Session = N
             profile_arg = base64.b64encode(profile_json.encode()).decode()
     finally:
         if not db: session.close()
+
 
     cmd = [
         bun, "run", str(index_file),

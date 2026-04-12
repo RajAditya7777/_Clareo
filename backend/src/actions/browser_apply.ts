@@ -11,8 +11,12 @@ async function run() {
   const args = process.argv.slice(2);
   const params: Record<string, string> = {};
   args.forEach(arg => {
-    const [key, val] = arg.replace("--", "").split("=");
-    params[key] = val;
+    const parts = arg.replace("--", "").split("=");
+    const key = parts[0];
+    const val = parts.slice(1).join("=");
+    if (key) {
+      params[key] = val || "";
+    }
   });
 
   const { url, resumePath, coverLetter, fullName, email } = params;

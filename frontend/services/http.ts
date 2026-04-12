@@ -1,6 +1,6 @@
 /**
- * Clariyo API Service
- * Centralized client for interacting with the FastAPI backend.
+ * Clariyo HTTP Service
+ * REST client for interacting with the FastAPI backend.
  */
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -36,7 +36,7 @@ export interface JobApplication {
     created_at: string;
 }
 
-class ClariyoAPI {
+class ClariyoHTTP {
     private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
         const url = `${API_BASE_URL}${endpoint}`;
         const response = await fetch(url, {
@@ -55,65 +55,15 @@ class ClariyoAPI {
         return response.json();
     }
 
-    /**
-     * Get all job applications.
-     */
     async getApplications(status?: ApplicationStatus): Promise<JobApplication[]> {
         const query = status ? `?status=${status}` : "";
         return this.request<JobApplication[]>(`/applications${query}`);
     }
 
-    /**
-     * Get a single application by job_id.
-     */
     async getApplication(jobId: string): Promise<JobApplication> {
         return this.request<JobApplication>(`/applications/${jobId}`);
     }
 
-    /**
-     * Start the 7-agent AI pipeline.
-     */
-    async startPipeline(searchQuery: string, resumeId: string = "default"): Promise<any> {
-        return this.request("/start-pipeline", {
-            method: "POST",
-            body: JSON.stringify({
-                resume_id: resumeId,
-                search_query: searchQuery,
-            }),
-        });
-    }
-
-    /**
-     * Stream the pipeline progress using Server-Sent Events.
-     * Returns the EventSource so it can be closed by the UI (Stop generation).
-     */
-    streamPipeline(searchQuery: string, resumeId: string = "default", onMessage: (data: any) => void, onError: (err: any) => void): EventSource {
-        const url = `${API_BASE_URL}/stream-pipeline?resume_id=${resumeId}&search_query=${encodeURIComponent(searchQuery)}`;
-        const eventSource = new EventSource(url);
-
-        eventSource.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                onMessage(data);
-                if (data.type === "result" || data.type === "error") {
-                    eventSource.close();
-                }
-            } catch (err) {
-                console.error("Error parsing SSE data:", err);
-            }
-        };
-
-        eventSource.onerror = (err) => {
-            onError(err);
-            eventSource.close();
-        };
-
-        return eventSource;
-    }
-
-    /**
-     * Human-In-The-Loop: Confirm and submit an application.
-     */
     async confirmApply(jobId: string, resumeId?: string): Promise<any> {
         const query = resumeId ? `?resume_id=${resumeId}` : "";
         return this.request(`/confirm-apply/${jobId}${query}`, {
@@ -121,18 +71,12 @@ class ClariyoAPI {
         });
     }
 
-    /**
-     * Delete an application.
-     */
     async deleteApplication(jobId: string): Promise<any> {
         return this.request(`/applications/${jobId}`, {
             method: "DELETE",
         });
     }
 
-    /**
-     * Upload a resume file.
-     */
     async uploadResume(file: File): Promise<any> {
         const formData = new FormData();
         formData.append("file", file);
@@ -141,7 +85,6 @@ class ClariyoAPI {
         const response = await fetch(url, {
             method: "POST",
             body: formData,
-            // Header "Content-Type" must NOT be set for FormData so the browser can set the boundary
         });
 
         if (!response.ok) {
@@ -152,12 +95,9 @@ class ClariyoAPI {
         return response.json();
     }
 
-    /**
-     * Health check.
-     */
     async checkHealth(): Promise<any> {
         return this.request("/health");
     }
 }
 
-export const api = new ClariyoAPI();
+export const http = new ClariyoHTTP();

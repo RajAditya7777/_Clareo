@@ -121,7 +121,7 @@ async function main() {
     }));
   });
   if (!step1.ok) { emit({ status: "error", step: "SCRAPE_JOBS", message: step1.error }); process.exit(1); }
-  const jobs = step1.data as { id: string; company: string; title: string; location: string; url: string; description: string }[];
+  const jobs = step1.data as { id: string; company: string; title: string; location: string; url: string; description: string; platform: string; company_logo: string }[];
   pipelineResults.jobs_found = jobs.length;
 
   // ── Step 3: PARSE_RESUME (Cache-aware) ──────────────────────────────────
