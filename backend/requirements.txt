@@ -5,6 +5,8 @@ psycopg2-binary
 llama-index-core
 llama-index-readers-file
 llama-index-llms-openai-like
+llama-index-embeddings-huggingface
+huggingface_hub
 python-dotenv
 pydantic>=2.0
 python-multipart

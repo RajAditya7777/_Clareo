@@ -22,6 +22,11 @@ try:
         load_index_from_storage,
     )
     from llama_index.llms.openai_like import OpenAILike
+    from llama_index.core import Settings
+    from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+
+    # Configure local HuggingFace embeddings
+    Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
     LLAMA_INDEX_AVAILABLE = True
 except ImportError:

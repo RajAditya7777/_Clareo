@@ -143,7 +143,7 @@ Return ONLY valid JSON:
       
       // Save it back to the backend cache
       try {
-        await fetch(`${backendUrl}/profiles`, {
+        await fetch(`${backendUrl}/api/profiles`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ resume_id: resumeId, ...parsed })
@@ -167,7 +167,7 @@ Return ONLY valid JSON:
     const jdStep = await runStep(`ANALYZE_JD:${job.company}`, async () => {
       // 1. Check cache first
       try {
-        const cacheRes = await fetch(`${backendUrl}/job-cache?url=${encodeURIComponent(job.url)}`);
+        const cacheRes = await fetch(`${backendUrl}/api/job-cache?url=${encodeURIComponent(job.url)}`);
         if (cacheRes.ok) {
           const cachedData = await cacheRes.json();
           if (cachedData) {
@@ -185,7 +185,7 @@ Return ONLY valid JSON:
       
       // 3. Save to cache
       try {
-        await fetch(`${backendUrl}/job-cache`, {
+        await fetch(`${backendUrl}/api/job-cache`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
@@ -244,7 +244,7 @@ Match analysis: ${JSON.stringify(match)}`;
       await runStep(`STAGE:${job.company}`, async () => {
         const backendUrl = "http://localhost:8000";
         try {
-          await fetch(`${backendUrl}/applications`, {
+          await fetch(`${backendUrl}/api/applications`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -273,7 +273,7 @@ Match analysis: ${JSON.stringify(match)}`;
     await runStep(`TRACK:${job.company}`, async () => {
       const backendUrl = "http://localhost:8000";
       try {
-        await fetch(`${backendUrl}/applications`, {
+        await fetch(`${backendUrl}/api/applications`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
